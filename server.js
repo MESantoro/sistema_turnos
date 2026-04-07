@@ -67,7 +67,6 @@ app.post('/api/personal', async (req, res) => {
 app.post('/api/turnos', async (req, res) => {
     try {
         const { turnos } = req.body;
-        // Limpiamos turnos viejos de esos días para no duplicar
         await Turno.deleteMany({
             fecha: { $in: turnos.map(t => t.fecha) }
         });
@@ -78,8 +77,8 @@ app.post('/api/turnos', async (req, res) => {
     }
 });
 
-// Ruta para que cargue el index.html al entrar al link
-app.get('*', (req, res) => {
+// RUTA CORREGIDA PARA RENDER (Usando /* en lugar de * solo)
+app.get('/*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
