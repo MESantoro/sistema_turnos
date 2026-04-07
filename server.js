@@ -42,7 +42,6 @@ const Turno = mongoose.model('Turno', TurnoSchema);
 
 // --- RUTAS DE LA API ---
 
-// Obtener todos los funcionarios
 app.get('/api/personal', async (req, res) => {
     try {
         const personal = await Funcionario.find();
@@ -52,7 +51,6 @@ app.get('/api/personal', async (req, res) => {
     }
 });
 
-// Agregar nuevo funcionario
 app.post('/api/personal', async (req, res) => {
     try {
         const nuevo = new Funcionario(req.body);
@@ -63,7 +61,6 @@ app.post('/api/personal', async (req, res) => {
     }
 });
 
-// Guardar turnos
 app.post('/api/turnos', async (req, res) => {
     try {
         const { turnos } = req.body;
@@ -77,8 +74,9 @@ app.post('/api/turnos', async (req, res) => {
     }
 });
 
-// RUTA CORREGIDA PARA RENDER (Usando /* en lugar de * solo)
-app.get('/*', (req, res) => {
+// --- SOLUCIÓN DEFINITIVA PARA LA RUTA ---
+// En lugar de usar asteriscos que tiran error en Node 22, usamos esta función de Express:
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
