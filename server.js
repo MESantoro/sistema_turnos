@@ -26,22 +26,16 @@ const FuncionarioSchema = new mongoose.Schema({
     legajo: String,
     nombre: String,
     apellido: String,
-    sector: String
+    sector: String,
+    horas_semanales_contrato: Number,
+    turnos: Array
 });
 
 const Funcionario = mongoose.model('Funcionario', FuncionarioSchema);
 
-const TurnoSchema = new mongoose.Schema({
-    funcionarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Funcionario' },
-    fecha: String,
-    entrada: String,
-    salida: String
-});
-
-const Turno = mongoose.model('Turno', TurnoSchema);
-
 // --- RUTAS DE LA API ---
 
+// Obtener todos
 app.get('/api/personal', async (req, res) => {
     try {
         const personal = await Funcionario.find();
@@ -51,31 +45,33 @@ app.get('/api/personal', async (req, res) => {
     }
 });
 
+// Guardar o Actualizar
 app.post('/api/personal', async (req, res) => {
     try {
-        const nuevo = new Funcionario(req.body);
-        await nuevo.save();
-        res.json(nuevo);
+        const { legajo } = req.body;
+        // Si ya existe por legajo, lo actualiza. Si no, lo crea.
+        const actualizado = await Funcionario.findOneAndUpdate(
+            { legajo: legajo },
+            req.body,
+            { upsert: true, new: true }
+        );
+        res.json(actualizado);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-app.post('/api/turnos', async (req, res) => {
+// Borrar
+app.delete('/api/personal/:id', async (req, res) => {
     try {
-        const { turnos } = req.body;
-        await Turno.deleteMany({
-            fecha: { $in: turnos.map(t => t.fecha) }
-        });
-        await Turno.insertMany(turnos);
-        res.json({ message: 'Turnos guardados' });
+        await Funcionario.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Eliminado' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// --- SOLUCIÓN DEFINITIVA PARA LA RUTA ---
-// En lugar de usar asteriscos que tiran error en Node 22, usamos esta función de Express:
+// Ruta para cargar la web
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
