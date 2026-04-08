@@ -7,75 +7,60 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- CONEXIÓN A MONGODB ATLAS ---
-const mongoURI = process.env.DATABASE_URL;
+// Conexión a MongoDB Atlas
+mongoose.connect(process.env.DATABASE_URL)
+  .then(() => console.log('✅ Conectado a MongoDB Atlas'))
+  .catch(err => console.error('❌ Error MongoDB:', err));
 
-mongoose.connect(mongoURI)
-  .then(() => console.log('✅ Conectado exitosamente a MongoDB Atlas'))
-  .catch(err => {
-    console.error('❌ Error crítico al conectar a MongoDB:', err.message);
-  });
+// Esquemas
+const Funcionario = mongoose.model('Funcionario', new mongoose.Schema({
+    legajo: String, nombre: String, apellido: String, sector: String,
+    horas_semanales_contrato: Number, turnos: Array
+}));
 
-// --- MODELOS DE DATOS ---
-const FuncionarioSchema = new mongoose.Schema({
-    legajo: String,
-    nombre: String,
-    apellido: String,
-    sector: String,
-    horas_semanales_contrato: Number,
-    turnos: Array
-});
+const Planilla = mongoose.model('Planilla', new mongoose.Schema({
+    fecha_lunes: String,
+    datos: Array
+}));
 
-const Funcionario = mongoose.model('Funcionario', FuncionarioSchema);
-
-// --- RUTAS DE LA API ---
-
-// Obtener todos
+// API - Personal
 app.get('/api/personal', async (req, res) => {
-    try {
-        const personal = await Funcionario.find();
-        res.json(personal);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await Funcionario.find()); } catch (err) { res.status(500).send(err); }
 });
 
-// Guardar o Actualizar
 app.post('/api/personal', async (req, res) => {
     try {
-        const { legajo } = req.body;
-        // Si ya existe por legajo, lo actualiza. Si no, lo crea.
         const actualizado = await Funcionario.findOneAndUpdate(
-            { legajo: legajo },
-            req.body,
-            { upsert: true, new: true }
+            { legajo: req.body.legajo }, req.body, { upsert: true, new: true }
         );
         res.json(actualizado);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).send(err); }
 });
 
-// Borrar
 app.delete('/api/personal/:id', async (req, res) => {
+    try { await Funcionario.findByIdAndDelete(req.params.id); res.json({ m: 'ok' }); } catch (err) { res.status(500).send(err); }
+});
+
+// API - Planillas (Guardado semanal)
+app.get('/api/planilla/:fecha', async (req, res) => {
     try {
-        await Funcionario.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Eliminado' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        const p = await Planilla.findOne({ fecha_lunes: req.params.fecha });
+        res.json(p ? p.datos : null);
+    } catch (err) { res.status(500).send(err); }
 });
 
-// Ruta para cargar la web
-app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.post('/api/guardar-planilla', async (req, res) => {
+    try {
+        const { fecha_lunes, datos } = req.body;
+        await Planilla.findOneAndUpdate({ fecha_lunes }, { datos }, { upsert: true });
+        res.json({ m: 'Planilla guardada' });
+    } catch (err) { res.status(500).send(err); }
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
-});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+app.listen(PORT, () => console.log(`🚀 Puerto: ${PORT}`));
