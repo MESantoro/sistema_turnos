@@ -34,8 +34,11 @@ app.get('/api/personal', async (req, res) => {
 
 app.post('/api/personal', async (req, res) => {
     try {
+        // Se cambió 'new: true' por 'returnDocument: "after"' para evitar el warning de Mongoose
         const actualizado = await Funcionario.findOneAndUpdate(
-            { legajo: req.body.legajo }, req.body, { upsert: true, new: true }
+            { legajo: req.body.legajo }, 
+            req.body, 
+            { upsert: true, returnDocument: 'after' } 
         );
         res.json(actualizado);
     } catch (err) { res.status(500).send(err); }
@@ -45,7 +48,7 @@ app.delete('/api/personal/:id', async (req, res) => {
     try { await Funcionario.findByIdAndDelete(req.params.id); res.json({ m: 'ok' }); } catch (err) { res.status(500).send(err); }
 });
 
-// API - Planillas (Guardado semanal)
+// API - Planillas
 app.get('/api/planilla/:fecha', async (req, res) => {
     try {
         const p = await Planilla.findOne({ fecha_lunes: req.params.fecha });
@@ -56,11 +59,19 @@ app.get('/api/planilla/:fecha', async (req, res) => {
 app.post('/api/guardar-planilla', async (req, res) => {
     try {
         const { fecha_lunes, datos } = req.body;
-        await Planilla.findOneAndUpdate({ fecha_lunes }, { datos }, { upsert: true });
+        await Planilla.findOneAndUpdate(
+            { fecha_lunes }, 
+            { datos }, 
+            { upsert: true, returnDocument: 'after' }
+        );
         res.json({ m: 'Planilla guardada' });
     } catch (err) { res.status(500).send(err); }
 });
 
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+// --- SOLUCIÓN AL ERROR DE DEPLOY ---
+// Cambiamos '*' por '(.*)' que es la sintaxis aceptada por las nuevas versiones
+app.get('(.*)', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-app.listen(PORT, () => console.log(`🚀 Puerto: ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en el puerto ${PORT}`));
