@@ -9,6 +9,8 @@ const PORT = process.env.PORT || 10000;
 
 app.use(cors());
 app.use(express.json());
+
+// 1. Servir archivos estáticos primero
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Conexión a MongoDB Atlas
@@ -34,7 +36,6 @@ app.get('/api/personal', async (req, res) => {
 
 app.post('/api/personal', async (req, res) => {
     try {
-        // Se cambió 'new: true' por 'returnDocument: "after"' para evitar el warning de Mongoose
         const actualizado = await Funcionario.findOneAndUpdate(
             { legajo: req.body.legajo }, 
             req.body, 
@@ -68,9 +69,9 @@ app.post('/api/guardar-planilla', async (req, res) => {
     } catch (err) { res.status(500).send(err); }
 });
 
-// --- SOLUCIÓN AL ERROR DE DEPLOY ---
-// Cambiamos '*' por '(.*)' que es la sintaxis aceptada por las nuevas versiones
-app.get('(.*)', (req, res) => {
+// 2. Fallback para cualquier otra ruta (SOLUCIÓN AL ERROR DE DEPLOY)
+// En lugar de usar '*', usamos un middleware que capture lo que no entró en las rutas anteriores
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

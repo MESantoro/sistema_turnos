@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     lunes.setDate(hoy.getDate() - diff);
     document.getElementById('fecha-semana').value = lunes.toISOString().split('T')[0];
     
-    // Al cambiar la fecha en el calendario, recargar datos automáticamente
     document.getElementById('fecha-semana').addEventListener('change', () => {
         actualizarFechas();
         cargar();
@@ -32,11 +31,9 @@ function actualizarFechas() {
 async function cargar() {
     const fecha = document.getElementById('fecha-semana').value;
     try {
-        // 1. Intentar traer planilla guardada de esa fecha específica
         const resPlanilla = await fetch(`/api/planilla/${fecha}`);
         let datos = await resPlanilla.json();
         
-        // 2. Si no hay planilla guardada para esa semana, traer la lista base de personal
         if (!datos) {
             const resPers = await fetch('/api/personal');
             datos = await resPers.json();
@@ -94,12 +91,6 @@ function cambioEstado(el) {
     const esF = td.querySelector('.sw-franco').checked;
     td.classList.toggle('bg-franco', esF);
     td.querySelectorAll('input:not(.sw-franco)').forEach(i => i.disabled = esF);
-    if(!esF) {
-        td.querySelector('.in-tm').disabled = !td.querySelector('.sw-tm').checked;
-        td.querySelector('.out-tm').disabled = !td.querySelector('.sw-tm').checked;
-        td.querySelector('.in-tt').disabled = !td.querySelector('.sw-tt').checked;
-        td.querySelector('.out-tt').disabled = !td.querySelector('.sw-tt').checked;
-    }
     ejecutarCalculoFila(el.closest('tr'));
 }
 
