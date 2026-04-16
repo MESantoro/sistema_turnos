@@ -58,7 +58,7 @@ async function cargar() {
                 const colorClase = dia.franco ? 'bg-franco-card' : 'bg-trabaja-card';
                 htmlDias += `
                 <td class="dia-celda p-1" data-dia="${i}">
-                    <div class="card-turno ${colorClase} p-2 shadow-sm">
+                    <div class="card-turno ${colorClase} p-2 shadow-sm rounded-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="lbl-estado small fw-bold">${dia.franco ? 'FRANCO' : 'TRABAJA'}</span>
                             <div class="form-check form-switch m-0">
@@ -67,13 +67,13 @@ async function cargar() {
                         </div>
                         <div class="input-group-custom mb-1">
                             <input type="checkbox" class="sw-tm" ${dia.tm?.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)">
-                            <input type="text" class="in-tm" value="${dia.tm?.in||'07:00'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                            <input type="text" class="out-tm" value="${dia.tm?.out||'14:30'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="in-tm form-control-sm border-0 bg-white rounded-2 px-1 text-center" style="width: 45px;" value="${dia.tm?.in||'07:00'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="out-tm form-control-sm border-0 bg-white rounded-2 px-1 text-center" style="width: 45px;" value="${dia.tm?.out||'14:30'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
                         </div>
                         <div class="input-group-custom">
                             <input type="checkbox" class="sw-tt" ${dia.tt?.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)">
-                            <input type="text" class="in-tt" value="${dia.tt?.in||'16:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                            <input type="text" class="out-tt" value="${dia.tt?.out||'19:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="in-tt form-control-sm border-0 bg-white rounded-2 px-1 text-center" style="width: 45px;" value="${dia.tt?.in||'16:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="out-tt form-control-sm border-0 bg-white rounded-2 px-1 text-center" style="width: 45px;" value="${dia.tt?.out||'19:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
                         </div>
                     </div>
                 </td>`;
@@ -98,7 +98,7 @@ function cambioEstado(el) {
     const card = el.closest('.card-turno');
     const esF = card.querySelector('.sw-franco').checked;
     const lbl = card.querySelector('.lbl-estado');
-    card.className = `card-turno p-2 shadow-sm ${esF ? 'bg-franco-card' : 'bg-trabaja-card'}`;
+    card.className = `card-turno p-2 shadow-sm rounded-3 ${esF ? 'bg-franco-card' : 'bg-trabaja-card'}`;
     lbl.innerText = esF ? 'FRANCO' : 'TRABAJA';
     card.querySelectorAll('input:not(.sw-franco)').forEach(i => i.disabled = esF);
     ejecutarCalculoFila(el.closest('tr'));
