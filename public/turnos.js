@@ -3,22 +3,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const diff = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1;
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() - diff);
-    const selectorFecha = document.getElementById('fecha-semana');
-    selectorFecha.value = lunes.toISOString().split('T')[0];
-    
-    selectorFecha.addEventListener('change', () => {
-        actualizarFechas();
-        cargar();
-    });
-
+    const selector = document.getElementById('fecha-semana');
+    selector.value = lunes.toISOString().split('T')[0];
+    selector.addEventListener('change', cargar);
     actualizarFechas();
     cargar();
 });
 
 function actualizarFechas() {
-    const inputFecha = document.getElementById('fecha-semana').value;
-    if(!inputFecha) return;
-    const parts = inputFecha.split('-');
+    const parts = document.getElementById('fecha-semana').value.split('-');
     const fechaBase = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
     document.querySelectorAll('#header-dias .fecha-header').forEach((span, idx) => {
         const d = new Date(fechaBase);
@@ -28,17 +21,16 @@ function actualizarFechas() {
 }
 
 async function cargar() {
+    actualizarFechas();
     const fecha = document.getElementById('fecha-semana').value;
     try {
-        const resPlanilla = await fetch(`/api/planilla/${fecha}`);
-        let datos = await resPlanilla.json();
+        const resPers = await fetch('/api/personal');
+        const personal = await resPers.json();
+        const resPlan = await fetch(`/api/planilla/${fecha}`);
+        const planilla = await resPlan.json();
         
-        // Si no hay datos guardados para esa fecha, carga el personal base
-        if (!datos || datos.length === 0) {
-            const resPers = await fetch('/api/personal');
-            datos = await resPers.json();
-        }
-
+        const datos = planilla && planilla.length > 0 ? planilla : personal;
+        
         const lista = document.getElementById('lista-personal');
         lista.innerHTML = '';
         
@@ -47,71 +39,48 @@ async function cargar() {
             tr.dataset.contrato = p.horas_semanales_contrato || 0;
             
             let htmlDias = '';
-            const turnosDef = Array(7).fill().map(() => ({
-                franco: false, 
-                tm: { on: true, in: "07:00", out: "14:30" }, 
-                tt: { on: true, in: "16:00", out: "19:00" }
+            const turnos = (p.turnos && p.turnos.length === 7) ? p.turnos : Array(7).fill().map(() => ({
+                franco: false, tm: { on: true, in: "07:00", out: "14:30" }, tt: { on: true, in: "16:00", out: "19:00" }
             }));
-            
-            const turnos = (p.turnos && p.turnos.length === 7) ? p.turnos : turnosDef;
 
             turnos.forEach((dia, i) => {
-                const colorClase = dia.franco ? 'bg-franco-card shadow-inner' : 'bg-trabaja-card shadow-sm';
+                const colorClase = dia.franco ? 'bg-franco-card' : 'bg-trabaja-card';
                 htmlDias += `
                 <td class="dia-celda p-1" data-dia="${i}">
-                    <div class="card-turno ${colorClase} p-2 rounded-3 border">
+                    <div class="card-turno ${colorClase} p-2 rounded-3 border shadow-sm">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="lbl-estado small fw-bold text-uppercase" style="font-size: 0.65rem;">${dia.franco ? 'FRANCO' : 'TRABAJA'}</span>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input sw-franco" type="checkbox" ${dia.franco?'checked':''} onchange="cambioEstado(this)">
-                            </div>
+                            <div class="form-check form-switch m-0"><input class="form-check-input sw-franco" type="checkbox" ${dia.franco?'checked':''} onchange="cambioEstado(this)"></div>
                         </div>
-                        <div class="input-group-custom mb-1 d-flex align-items-center gap-1">
-                            <input type="checkbox" class="sw-tm" ${dia.tm?.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)">
-                            <input type="text" class="in-tm form-control form-control-sm p-0 text-center border-0 bg-white" style="width:35px; font-size:0.75rem" value="${dia.tm?.in||'07:00'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                            <input type="text" class="out-tm form-control form-control-sm p-0 text-center border-0 bg-white" style="width:35px; font-size:0.75rem" value="${dia.tm?.out||'14:30'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                        </div>
-                        <div class="input-group-custom d-flex align-items-center gap-1">
-                            <input type="checkbox" class="sw-tt" ${dia.tt?.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)">
-                            <input type="text" class="in-tt form-control form-control-sm p-0 text-center border-0 bg-white" style="width:35px; font-size:0.75rem" value="${dia.tt?.in||'16:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                            <input type="text" class="out-tt form-control form-control-sm p-0 text-center border-0 bg-white" style="width:35px; font-size:0.75rem" value="${dia.tt?.out||'19:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                        </div>
+                        <div class="input-group-custom mb-1 d-flex gap-1"><input type="checkbox" class="sw-tm" ${dia.tm?.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)"><input type="text" class="in-tm form-control-sm border-0 rounded-1 text-center" style="width:35px" value="${dia.tm?.in}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)"><input type="text" class="out-tm form-control-sm border-0 rounded-1 text-center" style="width:35px" value="${dia.tm?.out}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)"></div>
+                        <div class="input-group-custom d-flex gap-1"><input type="checkbox" class="sw-tt" ${dia.tt?.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)"><input type="text" class="in-tt form-control-sm border-0 rounded-1 text-center" style="width:35px" value="${dia.tt?.in}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)"><input type="text" class="out-tt form-control-sm border-0 rounded-1 text-center" style="width:35px" value="${dia.tt?.out}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)"></div>
                     </div>
                 </td>`;
             });
 
             tr.innerHTML = `
                 <td class="text-start align-middle px-3 border-end">
-                    <div class="fw-bold text-dark" style="font-size:0.9rem">${p.apellido.toUpperCase()}, ${p.nombre.toUpperCase()}</div>
-                    <div class="text-muted small" style="font-size:0.75rem">${p.sector} | Leg: <span class="val-leg">${p.legajo}</span></div>
-                    <div class="small text-primary mt-1">Contrato: <b>${p.horas_semanales_contrato}hs</b></div>
+                    <div class="fw-bold">${p.apellido.toUpperCase()}, ${p.nombre.toUpperCase()}</div>
+                    <div class="text-muted small">${p.sector} | Leg: <span class="val-leg">${p.legajo}</span></div>
                 </td>
                 ${htmlDias}
-                <td class="align-middle fw-bold hs-total h5 border-start text-center">0.0</td>
-                <td class="align-middle text-center"><button class="btn btn-danger btn-sm rounded-circle shadow-sm" onclick="borrar('${p._id}')" style="width:28px; height:28px; padding:0; line-height:1">×</button></td>`;
-            
+                <td class="align-middle text-center border-start">
+                    <div class="hs-total fw-bold h5 mb-0">0.0</div>
+                    <div class="small text-muted">Contr: <b>${p.horas_semanales_contrato}</b></div>
+                </td>
+                <td class="align-middle text-center"><button class="btn btn-outline-danger btn-sm rounded-circle" onclick="borrar('${p._id}')" style="width:28px;height:28px;padding:0">×</button></td>`;
             lista.appendChild(tr);
             ejecutarCalculoFila(tr);
         });
-    } catch (e) { console.error("Error cargando:", e); }
+    } catch (e) { console.error(e); }
 }
 
 function cambioEstado(el) {
     const card = el.closest('.card-turno');
     const esF = card.querySelector('.sw-franco').checked;
-    const lbl = card.querySelector('.lbl-estado');
-    
-    // Cambia color de la celda dinámicamente
-    card.className = `card-turno p-2 rounded-3 border ${esF ? 'bg-franco-card shadow-inner' : 'bg-trabaja-card shadow-sm'}`;
-    lbl.innerText = esF ? 'FRANCO' : 'TRABAJA';
-    
+    card.className = `card-turno p-2 rounded-3 border shadow-sm ${esF ? 'bg-franco-card' : 'bg-trabaja-card'}`;
+    card.querySelector('.lbl-estado').innerText = esF ? 'FRANCO' : 'TRABAJA';
     card.querySelectorAll('input:not(.sw-franco)').forEach(i => i.disabled = esF);
-    if(!esF) {
-        card.querySelector('.in-tm').disabled = !card.querySelector('.sw-tm').checked;
-        card.querySelector('.out-tm').disabled = !card.querySelector('.sw-tm').checked;
-        card.querySelector('.in-tt').disabled = !card.querySelector('.sw-tt').checked;
-        card.querySelector('.out-tt').disabled = !card.querySelector('.sw-tt').checked;
-    }
     ejecutarCalculoFila(el.closest('tr'));
 }
 
@@ -126,12 +95,9 @@ function ejecutarCalculoFila(tr) {
         }
     });
     const totalEl = tr.querySelector('.hs-total');
-    totalEl.innerText = suma.toFixed(1);
-    
-    // Control visual de horas vs contrato
     const contrato = parseFloat(tr.dataset.contrato);
-    if (suma > contrato) totalEl.classList.add('text-danger');
-    else totalEl.classList.remove('text-danger');
+    totalEl.innerText = suma.toFixed(1);
+    totalEl.className = `hs-total fw-bold h5 mb-0 ${suma > contrato ? 'text-danger' : 'text-success'}`;
 }
 
 function diff(i, f) {
@@ -142,8 +108,7 @@ function diff(i, f) {
 }
 
 async function guardarPlanillaGeneral() {
-    const filas = document.querySelectorAll('#lista-personal tr');
-    const datos = Array.from(filas).map(tr => ({
+    const datos = Array.from(document.querySelectorAll('#lista-personal tr')).map(tr => ({
         legajo: tr.querySelector('.val-leg').innerText,
         nombre: tr.querySelector('.fw-bold').innerText.split(', ')[1],
         apellido: tr.querySelector('.fw-bold').innerText.split(', ')[0],
@@ -155,59 +120,36 @@ async function guardarPlanillaGeneral() {
             tt: { on: td.querySelector('.sw-tt').checked, in: td.querySelector('.in-tt').value, out: td.querySelector('.out-tt').value }
         }))
     }));
-
-    await fetch('/api/guardar-planilla', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ fecha_lunes: document.getElementById('fecha-semana').value, datos })
-    });
-    Swal.fire({ icon: 'success', title: 'Planilla Guardada', timer: 1000, showConfirmButton: false });
+    await fetch('/api/guardar-planilla', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ fecha_lunes: document.getElementById('fecha-semana').value, datos }) });
+    Swal.fire({ icon: 'success', title: 'Guardado', timer: 1000 });
 }
 
-function exportarExcel() {
-    const filas = document.querySelectorAll('#lista-personal tr');
-    const data = [["Funcionario", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom", "Total"]];
-    filas.forEach(tr => {
-        const f = [tr.querySelector('.fw-bold').innerText];
-        tr.querySelectorAll('.dia-celda').forEach(td => {
-            if(td.querySelector('.sw-franco').checked) f.push("FRANCO");
-            else {
-                let t = "";
-                if(td.querySelector('.sw-tm').checked) t += `${td.querySelector('.in-tm').value}-${td.querySelector('.out-tm').value}`;
-                if(td.querySelector('.sw-tt').checked) t += ` / ${td.querySelector('.in-tt').value}-${td.querySelector('.out-tt').value}`;
-                f.push(t || "-");
-            }
-        });
-        f.push(tr.querySelector('.hs-total').innerText);
-        data.push(f);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Turnos");
-    XLSX.writeFile(wb, `Planilla_${document.getElementById('fecha-semana').value}.xlsx`);
+async function borrar(id) {
+    if (await Swal.fire({ title: '¿Borrar empleado?', showCancelButton: true }).then(r => r.isConfirmed)) {
+        await fetch(`/api/personal/${id}`, { method: 'DELETE' });
+        cargar();
+    }
 }
 
 async function modalNuevo() {
     const { value: f } = await Swal.fire({
         title: 'Nuevo Funcionario',
-        html: `<input id="l" class="swal2-input" placeholder="Legajo"><input id="n" class="swal2-input" placeholder="Nombre">
-               <input id="a" class="swal2-input" placeholder="Apellido"><input id="h" type="number" class="swal2-input" placeholder="Horas Contrato">
-               <select id="s" class="swal2-input"><option value="Caja">Caja</option><option value="Tienda">Tienda</option><option value="Producción">Producción</option></select>`,
-        preConfirm: () => ({ 
-            legajo: document.getElementById('l').value, nombre: document.getElementById('n').value, 
-            apellido: document.getElementById('a').value, sector: document.getElementById('s').value, 
-            horas_semanales_contrato: document.getElementById('h').value, turnos: [] 
-        })
+        html: `<input id="l" class="swal2-input" placeholder="Legajo"><input id="n" class="swal2-input" placeholder="Nombre"><input id="a" class="swal2-input" placeholder="Apellido"><input id="h" type="number" class="swal2-input" placeholder="Horas Contrato"><select id="s" class="swal2-input"><option value="Caja">Caja</option><option value="Tienda">Tienda</option><option value="Producción">Producción</option></select>`,
+        preConfirm: () => ({ legajo: document.getElementById('l').value, nombre: document.getElementById('n').value, apellido: document.getElementById('a').value, sector: document.getElementById('s').value, horas_semanales_contrato: document.getElementById('h').value, turnos: [] })
     });
-    if (f && f.legajo) { 
-        await fetch('/api/personal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(f) });
-        cargar();
-    }
+    if (f && f.legajo) { await fetch('/api/personal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(f) }); cargar(); }
 }
 
-async function borrar(id) {
-    if (await Swal.fire({ title: '¿Borrar?', showCancelButton: true }).then(r => r.isConfirmed)) {
-        await fetch(`/api/personal/${id}`, { method: 'DELETE' });
-        cargar();
-    }
+function exportarExcel() {
+    const data = [["Funcionario", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom", "Total"]];
+    document.querySelectorAll('#lista-personal tr').forEach(tr => {
+        const f = [tr.querySelector('.fw-bold').innerText];
+        tr.querySelectorAll('.dia-celda').forEach(td => {
+            if(td.querySelector('.sw-franco').checked) f.push("FRANCO");
+            else f.push(`${td.querySelector('.in-tm').value}-${td.querySelector('.out-tm').value} / ${td.querySelector('.in-tt').value}-${td.querySelector('.out-tt').value}`);
+        });
+        f.push(tr.querySelector('.hs-total').innerText);
+        data.push(f);
+    });
+    XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.aoa_to_sheet(data), "Turnos"), `Planilla_${document.getElementById('fecha-semana').value}.xlsx`);
 }
