@@ -11,12 +11,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Conexión a MongoDB Atlas
 mongoose.connect(process.env.DATABASE_URL)
-  .then(() => console.log('✅ Conectado a MongoDB Atlas'))
+  .then(() => console.log('✅ Conectado exitosamente a MongoDB Atlas'))
   .catch(err => console.error('❌ Error MongoDB:', err));
 
-// Esquemas
 const Funcionario = mongoose.model('Funcionario', new mongoose.Schema({
     legajo: String, nombre: String, apellido: String, sector: String,
     horas_semanales_contrato: Number, turnos: Array
@@ -27,7 +25,6 @@ const Planilla = mongoose.model('Planilla', new mongoose.Schema({
     datos: Array
 }));
 
-// API - Personal
 app.get('/api/personal', async (req, res) => {
     try { res.json(await Funcionario.find()); } catch (err) { res.status(500).send(err); }
 });
@@ -35,9 +32,7 @@ app.get('/api/personal', async (req, res) => {
 app.post('/api/personal', async (req, res) => {
     try {
         const actualizado = await Funcionario.findOneAndUpdate(
-            { legajo: req.body.legajo }, 
-            req.body, 
-            { upsert: true, returnDocument: 'after' } 
+            { legajo: req.body.legajo }, req.body, { upsert: true, returnDocument: 'after' }
         );
         res.json(actualizado);
     } catch (err) { res.status(500).send(err); }
@@ -47,7 +42,6 @@ app.delete('/api/personal/:id', async (req, res) => {
     try { await Funcionario.findByIdAndDelete(req.params.id); res.json({ m: 'ok' }); } catch (err) { res.status(500).send(err); }
 });
 
-// API - Planillas (Histórico semanal)
 app.get('/api/planilla/:fecha', async (req, res) => {
     try {
         const p = await Planilla.findOne({ fecha_lunes: req.params.fecha });
@@ -58,18 +52,14 @@ app.get('/api/planilla/:fecha', async (req, res) => {
 app.post('/api/guardar-planilla', async (req, res) => {
     try {
         const { fecha_lunes, datos } = req.body;
-        await Planilla.findOneAndUpdate(
-            { fecha_lunes }, 
-            { datos }, 
-            { upsert: true, returnDocument: 'after' }
-        );
+        await Planilla.findOneAndUpdate({ fecha_lunes }, { datos }, { upsert: true });
         res.json({ m: 'Planilla guardada' });
     } catch (err) { res.status(500).send(err); }
 });
 
-// Fallback para Node v22 / Express 5
+// Middleware para SPA: sirve el index.html para cualquier ruta no encontrada
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`🚀 Servidor en puerto: ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en el puerto ${PORT}`));
