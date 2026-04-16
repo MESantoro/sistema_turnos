@@ -3,9 +3,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const diff = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1;
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() - diff);
-    document.getElementById('fecha-semana').value = lunes.toISOString().split('T')[0];
+    const selectorFecha = document.getElementById('fecha-semana');
+    selectorFecha.value = lunes.toISOString().split('T')[0];
     
-    document.getElementById('fecha-semana').addEventListener('change', () => {
+    selectorFecha.addEventListener('change', () => {
         actualizarFechas();
         cargar();
     });
@@ -32,6 +33,7 @@ async function cargar() {
         const resPlanilla = await fetch(`/api/planilla/${fecha}`);
         let datos = await resPlanilla.json();
         
+        // Si no hay datos guardados para esa fecha, carga el personal base
         if (!datos || datos.length === 0) {
             const resPers = await fetch('/api/personal');
             datos = await resPers.json();
@@ -39,8 +41,7 @@ async function cargar() {
 
         const lista = document.getElementById('lista-personal');
         lista.innerHTML = '';
-        if (!datos) return;
-
+        
         datos.forEach(p => {
             const tr = document.createElement('tr');
             tr.dataset.contrato = p.horas_semanales_contrato || 0;
@@ -55,38 +56,39 @@ async function cargar() {
             const turnos = (p.turnos && p.turnos.length === 7) ? p.turnos : turnosDef;
 
             turnos.forEach((dia, i) => {
-                const colorClase = dia.franco ? 'bg-franco-card' : 'bg-trabaja-card';
+                const colorClase = dia.franco ? 'bg-franco-card shadow-inner' : 'bg-trabaja-card shadow-sm';
                 htmlDias += `
                 <td class="dia-celda p-1" data-dia="${i}">
-                    <div class="card-turno ${colorClase} p-2 shadow-sm rounded-3">
+                    <div class="card-turno ${colorClase} p-2 rounded-3 border">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="lbl-estado small fw-bold">${dia.franco ? 'FRANCO' : 'TRABAJA'}</span>
+                            <span class="lbl-estado small fw-bold text-uppercase" style="font-size: 0.65rem;">${dia.franco ? 'FRANCO' : 'TRABAJA'}</span>
                             <div class="form-check form-switch m-0">
                                 <input class="form-check-input sw-franco" type="checkbox" ${dia.franco?'checked':''} onchange="cambioEstado(this)">
                             </div>
                         </div>
-                        <div class="input-group-custom mb-1">
+                        <div class="input-group-custom mb-1 d-flex align-items-center gap-1">
                             <input type="checkbox" class="sw-tm" ${dia.tm?.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)">
-                            <input type="text" class="in-tm form-control-sm border-0 bg-white rounded-2 px-1 text-center" style="width: 45px;" value="${dia.tm?.in||'07:00'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                            <input type="text" class="out-tm form-control-sm border-0 bg-white rounded-2 px-1 text-center" style="width: 45px;" value="${dia.tm?.out||'14:30'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="in-tm form-control form-control-sm p-0 text-center border-0 bg-white" style="width:35px; font-size:0.75rem" value="${dia.tm?.in||'07:00'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="out-tm form-control form-control-sm p-0 text-center border-0 bg-white" style="width:35px; font-size:0.75rem" value="${dia.tm?.out||'14:30'}" ${(!dia.tm?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
                         </div>
-                        <div class="input-group-custom">
+                        <div class="input-group-custom d-flex align-items-center gap-1">
                             <input type="checkbox" class="sw-tt" ${dia.tt?.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)">
-                            <input type="text" class="in-tt form-control-sm border-0 bg-white rounded-2 px-1 text-center" style="width: 45px;" value="${dia.tt?.in||'16:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                            <input type="text" class="out-tt form-control-sm border-0 bg-white rounded-2 px-1 text-center" style="width: 45px;" value="${dia.tt?.out||'19:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="in-tt form-control form-control-sm p-0 text-center border-0 bg-white" style="width:35px; font-size:0.75rem" value="${dia.tt?.in||'16:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="out-tt form-control form-control-sm p-0 text-center border-0 bg-white" style="width:35px; font-size:0.75rem" value="${dia.tt?.out||'19:00'}" ${(!dia.tt?.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
                         </div>
                     </div>
                 </td>`;
             });
 
             tr.innerHTML = `
-                <td class="text-start align-middle px-3">
-                    <div class="fw-bold text-dark">${p.apellido.toUpperCase()}, ${p.nombre.toUpperCase()}</div>
-                    <div class="text-muted small">${p.sector} | Leg: <span class="val-leg">${p.legajo}</span></div>
+                <td class="text-start align-middle px-3 border-end">
+                    <div class="fw-bold text-dark" style="font-size:0.9rem">${p.apellido.toUpperCase()}, ${p.nombre.toUpperCase()}</div>
+                    <div class="text-muted small" style="font-size:0.75rem">${p.sector} | Leg: <span class="val-leg">${p.legajo}</span></div>
+                    <div class="small text-primary mt-1">Contrato: <b>${p.horas_semanales_contrato}hs</b></div>
                 </td>
                 ${htmlDias}
-                <td class="align-middle fw-bold hs-total h5">0.0</td>
-                <td class="align-middle"><button class="btn btn-outline-danger btn-sm rounded-circle" onclick="borrar('${p._id}')">×</button></td>`;
+                <td class="align-middle fw-bold hs-total h5 border-start text-center">0.0</td>
+                <td class="align-middle text-center"><button class="btn btn-danger btn-sm rounded-circle shadow-sm" onclick="borrar('${p._id}')" style="width:28px; height:28px; padding:0; line-height:1">×</button></td>`;
             
             lista.appendChild(tr);
             ejecutarCalculoFila(tr);
@@ -98,9 +100,18 @@ function cambioEstado(el) {
     const card = el.closest('.card-turno');
     const esF = card.querySelector('.sw-franco').checked;
     const lbl = card.querySelector('.lbl-estado');
-    card.className = `card-turno p-2 shadow-sm rounded-3 ${esF ? 'bg-franco-card' : 'bg-trabaja-card'}`;
+    
+    // Cambia color de la celda dinámicamente
+    card.className = `card-turno p-2 rounded-3 border ${esF ? 'bg-franco-card shadow-inner' : 'bg-trabaja-card shadow-sm'}`;
     lbl.innerText = esF ? 'FRANCO' : 'TRABAJA';
+    
     card.querySelectorAll('input:not(.sw-franco)').forEach(i => i.disabled = esF);
+    if(!esF) {
+        card.querySelector('.in-tm').disabled = !card.querySelector('.sw-tm').checked;
+        card.querySelector('.out-tm').disabled = !card.querySelector('.sw-tm').checked;
+        card.querySelector('.in-tt').disabled = !card.querySelector('.sw-tt').checked;
+        card.querySelector('.out-tt').disabled = !card.querySelector('.sw-tt').checked;
+    }
     ejecutarCalculoFila(el.closest('tr'));
 }
 
@@ -114,7 +125,13 @@ function ejecutarCalculoFila(tr) {
             if (td.querySelector('.sw-tt').checked) suma += diff(td.querySelector('.in-tt').value, td.querySelector('.out-tt').value);
         }
     });
-    tr.querySelector('.hs-total').innerText = suma.toFixed(1);
+    const totalEl = tr.querySelector('.hs-total');
+    totalEl.innerText = suma.toFixed(1);
+    
+    // Control visual de horas vs contrato
+    const contrato = parseFloat(tr.dataset.contrato);
+    if (suma > contrato) totalEl.classList.add('text-danger');
+    else totalEl.classList.remove('text-danger');
 }
 
 function diff(i, f) {
@@ -139,12 +156,12 @@ async function guardarPlanillaGeneral() {
         }))
     }));
 
-    const res = await fetch('/api/guardar-planilla', {
+    await fetch('/api/guardar-planilla', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ fecha_lunes: document.getElementById('fecha-semana').value, datos })
     });
-    if (res.ok) Swal.fire({ icon: 'success', title: 'Planilla Guardada', timer: 1500 });
+    Swal.fire({ icon: 'success', title: 'Planilla Guardada', timer: 1000, showConfirmButton: false });
 }
 
 function exportarExcel() {
@@ -174,7 +191,7 @@ async function modalNuevo() {
     const { value: f } = await Swal.fire({
         title: 'Nuevo Funcionario',
         html: `<input id="l" class="swal2-input" placeholder="Legajo"><input id="n" class="swal2-input" placeholder="Nombre">
-               <input id="a" class="swal2-input" placeholder="Apellido"><input id="h" type="number" class="swal2-input" placeholder="Horas">
+               <input id="a" class="swal2-input" placeholder="Apellido"><input id="h" type="number" class="swal2-input" placeholder="Horas Contrato">
                <select id="s" class="swal2-input"><option value="Caja">Caja</option><option value="Tienda">Tienda</option><option value="Producción">Producción</option></select>`,
         preConfirm: () => ({ 
             legajo: document.getElementById('l').value, nombre: document.getElementById('n').value, 

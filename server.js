@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 mongoose.connect(process.env.DATABASE_URL)
-  .then(() => console.log('✅ Conectado a MongoDB Atlas'))
+  .then(() => console.log('✅ MongoDB Conectado'))
   .catch(err => console.error('❌ Error MongoDB:', err));
 
 const Funcionario = mongoose.model('Funcionario', new mongoose.Schema({
@@ -57,8 +57,6 @@ app.post('/api/guardar-planilla', async (req, res) => {
     } catch (err) { res.status(500).send(err); }
 });
 
-app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.use((req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
-app.listen(PORT, () => console.log(`🚀 Servidor en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Puerto ${PORT}`));
