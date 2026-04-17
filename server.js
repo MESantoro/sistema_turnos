@@ -31,15 +31,19 @@ app.get('/api/personal', async (req, res) => {
 
 app.post('/api/personal', async (req, res) => {
     try {
-        const actualizado = await Funcionario.findOneAndUpdate(
-            { legajo: req.body.legajo }, req.body, { upsert: true, returnDocument: 'after' }
-        );
+        const query = { legajo: req.body.legajo };
+        const op = { upsert: true, new: true };
+        const actualizado = await Funcionario.findOneAndUpdate(query, req.body, op);
         res.json(actualizado);
     } catch (err) { res.status(500).send(err); }
 });
 
 app.delete('/api/personal/:id', async (req, res) => {
-    try { await Funcionario.findByIdAndDelete(req.params.id); res.json({ m: 'ok' }); } catch (err) { res.status(500).send(err); }
+    try {
+        if (!req.params.id || req.params.id === 'undefined') return res.status(400).send("ID requerido");
+        await Funcionario.findByIdAndDelete(req.params.id);
+        res.json({ m: 'ok' });
+    } catch (err) { res.status(500).send(err); }
 });
 
 app.get('/api/planilla/:fecha', async (req, res) => {
@@ -53,10 +57,9 @@ app.post('/api/guardar-planilla', async (req, res) => {
     try {
         const { fecha_lunes, datos } = req.body;
         await Planilla.findOneAndUpdate({ fecha_lunes }, { datos }, { upsert: true });
-        res.json({ m: 'Planilla guardada' });
+        res.json({ m: 'ok' });
     } catch (err) { res.status(500).send(err); }
 });
 
 app.use((req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
-
-app.listen(PORT, () => console.log(`🚀 Puerto ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor listo en puerto ${PORT}`));
