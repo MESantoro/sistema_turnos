@@ -23,7 +23,6 @@ async function cargar() {
         const lista = document.getElementById('lista-personal');
         lista.innerHTML = '';
         
-        // Priorizamos la planilla guardada, pero cruzamos con el personal base para no perder el _id
         const datos = (planillaGuardada || personalBase).map(p => {
             const base = personalBase.find(b => b.legajo == p.legajo);
             return { ...p, _id: p._id || base?._id };
@@ -39,25 +38,26 @@ async function cargar() {
             }));
 
             turnos.forEach((dia, i) => {
+                // Lógica de color Rosa para Franco, Blanco para Trabaja
                 const colorClase = dia.franco ? 'bg-franco-card' : 'bg-trabaja-card';
                 htmlDias += `
                 <td class="dia-celda p-1">
-                    <div class="card-turno ${colorClase} p-2 rounded-3 border shadow-sm">
+                    <div class="card-turno ${colorClase} p-2 rounded-3 border shadow-sm" style="min-width: 105px;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="lbl-estado small fw-bold text-uppercase" style="font-size:0.65rem">${dia.franco ? 'FRANCO' : 'TRABAJA'}</span>
                             <div class="form-check form-switch m-0">
                                 <input class="form-check-input sw-franco" type="checkbox" ${dia.franco?'checked':''} onchange="cambioEstado(this)">
                             </div>
                         </div>
-                        <div class="input-group-custom mb-1 d-flex gap-1">
+                        <div class="input-group-custom mb-1 d-flex gap-1 align-items-center">
                             <input type="checkbox" class="sw-tm" ${dia.tm.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)">
-                            <input type="text" class="in-tm form-control-sm border-0 rounded-1 text-center" style="width:35px" value="${dia.tm.in}" ${(!dia.tm.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                            <input type="text" class="out-tm form-control-sm border-0 rounded-1 text-center" style="width:35px" value="${dia.tm.out}" ${(!dia.tm.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="in-tm form-control-sm border-0 rounded-1 text-center" style="width:42px; font-size:0.8rem; padding:2px" value="${dia.tm.in}" ${(!dia.tm.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="out-tm form-control-sm border-0 rounded-1 text-center" style="width:42px; font-size:0.8rem; padding:2px" value="${dia.tm.out}" ${(!dia.tm.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
                         </div>
-                        <div class="input-group-custom d-flex gap-1">
+                        <div class="input-group-custom d-flex gap-1 align-items-center">
                             <input type="checkbox" class="sw-tt" ${dia.tt.on?'checked':''} ${dia.franco?'disabled':''} onchange="cambioEstado(this)">
-                            <input type="text" class="in-tt form-control-sm border-0 rounded-1 text-center" style="width:35px" value="${dia.tt.in}" ${(!dia.tt.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
-                            <input type="text" class="out-tt form-control-sm border-0 rounded-1 text-center" style="width:35px" value="${dia.tt.out}" ${(!dia.tt.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="in-tt form-control-sm border-0 rounded-1 text-center" style="width:42px; font-size:0.8rem; padding:2px" value="${dia.tt.in}" ${(!dia.tt.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
+                            <input type="text" class="out-tt form-control-sm border-0 rounded-1 text-center" style="width:42px; font-size:0.8rem; padding:2px" value="${dia.tt.out}" ${(!dia.tt.on||dia.franco)?'disabled':''} oninput="recalcular(this)">
                         </div>
                     </div>
                 </td>`;
@@ -65,8 +65,8 @@ async function cargar() {
 
             tr.innerHTML = `
                 <td class="text-start align-middle px-3 border-end">
-                    <div class="fw-bold" style="font-size:0.9rem">${p.apellido.toUpperCase()}, ${p.nombre.toUpperCase()}</div>
-                    <div class="text-muted small">Leg: <span class="val-leg">${p.legajo}</span></div>
+                    <div class="fw-bold" style="font-size:0.85rem">${p.apellido.toUpperCase()}, ${p.nombre.toUpperCase()}</div>
+                    <div class="text-muted small" style="font-size:0.75rem">Leg: <span class="val-leg">${p.legajo}</span></div>
                 </td>
                 ${htmlDias}
                 <td class="align-middle text-center border-start">
@@ -79,7 +79,7 @@ async function cargar() {
             lista.appendChild(tr);
             ejecutarCalculoFila(tr);
         });
-    } catch (e) { console.error("Error al cargar datos:", e); }
+    } catch (e) { console.error(e); }
 }
 
 function actualizarFechasHeader(fecha) {
@@ -95,7 +95,7 @@ function actualizarFechasHeader(fecha) {
 function cambioEstado(el) {
     const card = el.closest('.card-turno');
     const esF = card.querySelector('.sw-franco').checked;
-    // Cambio inmediato de estética
+    // Cambia color de fondo: bg-franco-card (rosa) o bg-trabaja-card (blanco)
     card.className = `card-turno p-2 rounded-3 border shadow-sm ${esF ? 'bg-franco-card' : 'bg-trabaja-card'}`;
     card.querySelector('.lbl-estado').innerText = esF ? 'FRANCO' : 'TRABAJA';
     card.querySelectorAll('input:not(.sw-franco)').forEach(i => i.disabled = esF);
@@ -115,7 +115,6 @@ function ejecutarCalculoFila(tr) {
     const totalEl = tr.querySelector('.hs-total');
     const contrato = parseFloat(tr.dataset.contrato);
     totalEl.innerText = suma.toFixed(1);
-    // Control visual de horas: verde si cumple, rojo si excede
     totalEl.className = `hs-total fw-bold h5 mb-0 ${suma > contrato ? 'text-danger' : 'text-success'}`;
 }
 
@@ -147,13 +146,10 @@ async function guardarPlanillaGeneral() {
 }
 
 async function borrar(id) {
-    if (!id || id === 'undefined' || id === 'null') {
-        return Swal.fire('Error', 'ID de base de datos no encontrado. Refresca la página.', 'error');
-    }
-    const result = await Swal.fire({ title: '¿Borrar de la base de datos?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' });
-    if (result.isConfirmed) {
-        const res = await fetch(`/api/personal/${id}`, { method: 'DELETE' });
-        if(res.ok) { cargar(); Swal.fire('Eliminado', '', 'success'); }
+    const res = await Swal.fire({ title: '¿Borrar?', icon: 'warning', showCancelButton: true });
+    if (res.isConfirmed) {
+        await fetch(`/api/personal/${id}`, { method: 'DELETE' });
+        cargar();
     }
 }
 
@@ -180,5 +176,8 @@ function exportarExcel() {
         fila.push(tr.querySelector('.hs-total').innerText);
         data.push(fila);
     });
-    XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.aoa_to_sheet(data), "Turnos"), `Planilla_${document.getElementById('fecha-semana').value}.xlsx`);
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Turnos");
+    XLSX.writeFile(wb, `Planilla_${document.getElementById('fecha-semana').value}.xlsx`);
 }
